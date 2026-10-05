@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Кэшбэк Сервис</title>
+  <!-- Telegram Web App SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg-color: #121927;
+      --card-bg: #1c2536;
+      --input-bg: #161e2e;
+      --text-muted: #8c9ba5;
+      --text-bright: #ffffff;
+      --accent-blue: #4a82c2;
+      --accent-blue-hover: #3b6ea7;
+      --accent-red: #e64545;
+      --accent-red-hover: #c93636;
+      --accent-gold: #ffc107;
+      --border-color: #273347;
+      --border-admin: #3d2b38;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      color: var(--text-bright);
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+
+    .content {
+      flex: 1;
+      padding: 16px;
+      padding-bottom: 80px;
+    }
+
+    .tab-content {
+      display: none;
+    }
+
+    .tab-content.active {
+      display: block;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 14px;
+      padding: 18px 16px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border-color);
+    }
+
+    .card-title {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-muted);
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .id-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 12px;
+      word-break: break-all;
+    }
+
+    .balance-value {
+      font-size: 1.6rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .card-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    .btn {
+      width: 100%;
+      padding: 12px;
+      border: none;
+      border-radius: 10px;
+      background: var(--accent-blue);
+      color: #ffffff;
+      font-weight: 600;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: background 0.2s;
+      text-align: center;
+      text-decoration: none;
+      display: block;
+    }
+
+    .btn:active {
+      background: var(--accent-blue-hover);
+    }
+
+    .btn-red {
+      background: var(--accent-red);
+    }
+
+    .btn-red:active {
+      background: var(--accent-red-hover);
+    }
+
+    .btn-secondary {
+      background: var(--input-bg);
+      border: 1px solid var(--border-color);
+      color: var(--text-bright);
+    }
+
+    .btn-secondary:active {
+      background: var(--border-color);
+    }
+
+    .btn-xs {
+      padding: 6px 10px;
+      font-size: 0.75rem;
+      border-radius: 6px;
+      width: auto;
+      display: inline-block;
+    }
+
+    .admin-card {
+      border: 1px solid var(--border-admin);
+    }
+
+    .admin-title {
+      color: #e65252;
+      font-size: 0.8rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-label {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    input, textarea {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: #fff;
+      font-size: 1rem;
+      outline: none;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    input:focus, textarea:focus {
+      border-color: var(--accent-blue);
+    }
+
+    .admin-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .admin-actions .btn {
+      flex: 1;
+    }
+
+    .status-msg {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      text-align: center;
+      min-height: 18px;
+    }
+
+    .status-msg.error {
+      color: var(--accent-red);
+    }
+
+    .status-msg.success {
+      color: #4ade80;
+    }
+
+    .admin-stats-container {
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px dashed var(--border-color);
+    }
+
+    .stats-list {
+      display: none;
+      margin-top: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      background: var(--input-bg);
+      border-radius: 10px;
+      padding: 10px;
+      border: 1px solid var(--border-color);
+    }
+
+    .stats-item {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border-color);
+    }
+
+    .stats-item:last-child {
+      border-bottom: none;
+    }
+
+    .stats-id {
+      color: var(--text-muted);
+      font-family: monospace;
+    }
+
+    .stats-balance {
+      font-weight: 700;
+      color: #4ade80;
+    }
+
+    .examples-gallery {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .example-img-wrapper {
+      width: 100%;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+    }
+
+    .example-img-wrapper img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    /* Звёзды и Отзывы */
+    .star-rating {
+      display: flex;
+      gap: 4px;
+      margin: 8px 0 14px 0;
+      flex-wrap: wrap;
+    }
+
+    .star-icon {
+      width: 24px;
+      height: 24px;
+      fill: #273347;
+      cursor: pointer;
+      transition: fill 0.2s, transform 0.1s;
+    }
+
+    .star-icon.filled {
+      fill: var(--accent-gold);
+    }
+
+    .star-icon:active {
+      transform: scale(1.15);
+    }
+
+    .rating-value-label {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--accent-gold);
+      margin-top: 4px;
+    }
+
+    .reviews-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .review-item {
+      background: var(--input-bg);
+      border-radius: 12px;
+      padding: 14px;
+      border: 1px solid var(--border-color);
+      position: relative;
+    }
+
+    .review-header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .review-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--card-bg);
+      border: 1px solid var(--border-color);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      color: var(--accent-blue);
+    }
+
+    .review-user-info {
+      flex: 1;
+    }
+
+    .review-username {
+      font-weight: 700;
+      font-size: 0.95rem;
+      color: var(--text-bright);
+    }
+
+    .review-date {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .review-stars {
+      display: flex;
+      align-items: center;
+      gap: 2px;
+      margin-bottom: 8px;
+    }
+
+    .review-stars .star-icon {
+      width: 16px;
+      height: 16px;
+      cursor: default;
+    }
+
+    .review-text {
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: #e1e7ec;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    /* Кнопки управления отзывом */
+    .review-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 10px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    /* Блок ответа администратора */
+    .admin-reply-box {
+      margin-top: 12px;
+      margin-left: 12px;
+      padding: 10px 12px;
+      background: rgba(74, 130, 194, 0.08);
+      border-left: 3px solid var(--accent-blue);
+      border-radius: 6px;
+    }
+
+    .admin-reply-header {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--accent-blue);
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .reply-form {
+      display: none;
+      margin-top: 10px;
+    }
+
+    .reply-form textarea {
+      min-height: 60px;
+      font-size: 0.85rem;
+      margin-bottom: 8px;
+    }
+
+    /* Нижнее меню */
+    .nav-bar {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 64px;
+      background: var(--card-bg);
+      display: flex;
+      border-top: 1px solid var(--border-color);
+      z-index: 100;
+    }
+
+    .nav-item {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .nav-item.active {
+      color: var(--accent-blue);
+    }
+
+    .nav-icon {
+      width: 22px;
+      height: 22px;
+      fill: currentColor;
+      margin-bottom: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="content">
+    <!-- Главная вкладка -->
+    <div id="tab-main" class="tab-content active">
+      
+      <div class="card">
+        <div class="card-title">ТВОЙ TELEGRAM ID</div>
+        <div class="id-value" id="user-telegram-id">Загрузка...</div>
+        <button class="btn" id="btn-copy-id">Скопировать ID</button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ТВОЙ КЭШБЭК (СКИДКА)</div>
+        <div class="balance-value" id="balance-amount">0 ₽</div>
+        <div class="card-desc">
+          Накопленные рубли можно использовать в качестве скидки при следующих заказах!
+        </div>
+      </div>
+
+      <div class="card admin-card" id="admin-panel" style="display: none;">
+        <div class="admin-title">ПАНЕЛЬ АДМИНИСТРАТОРА</div>
+        
+        <div class="input-group">
+          <label class="input-label">ID пользователя:</label>
+          <input type="number" id="admin-user-id" placeholder="Введите ID" />
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Сумма рублей:</label>
+          <input type="number" id="admin-amount" placeholder="0" />
+        </div>
+
+        <div class="admin-actions">
+          <button class="btn" id="btn-admin-add">Начислить</button>
+          <button class="btn btn-red" id="btn-admin-remove">Списать</button>
+        </div>
+
+        <div class="admin-stats-container">
+          <button class="btn btn-secondary" id="btn-toggle-stats">Статистика пользователей</button>
+          <div class="stats-list" id="admin-stats-list">
+            <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Загрузка...</div>
+          </div>
+        </div>
+
+        <div class="status-msg" id="admin-status"></div>
+      </div>
+
+    </div>
+
+    <!-- Вкладка Отзывы -->
+    <div id="tab-reviews" class="tab-content">
+      <div class="card">
+        <div class="card-title">ОСТАВИТЬ ОТЗЫВ</div>
+        
+        <div class="input-group">
+          <label class="input-label">Ваша оценка (от 1 до 10): <span class="rating-value-label" id="rating-label">10 / 10</span></label>
+          <div class="star-rating" id="star-picker"></div>
+        </div>
+
+        <div class="input-group">
+          <label class="input-label">Ваш отзыв:</label>
+          <textarea id="review-text-input" placeholder="Напишите впечатление о работе..."></textarea>
+        </div>
+
+        <button class="btn" id="btn-submit-review">Опубликовать отзыв</button>
+        <div class="status-msg" id="review-status"></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">ОТЗЫВЫ ПОЛЬЗОВАТЕЛЕЙ</div>
+        <div class="reviews-list" id="reviews-container">
+          <div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Загрузка отзывов...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка Примеры -->
+    <div id="tab-examples" class="tab-content">
+      <div class="card">
+        <div class="card-title">ПРИМЕРЫ РАБОТ</div>
+        <div class="examples-gallery">
+          <a href="https://ibb.co/xSyVnTm0" target="_blank" class="example-img-wrapper">
+            <img src="https://i.ibb.co/0jkP0bBS/IMG-2112.jpg" alt="IMG-2112" />
+          </a>
+          <a href="https://ibb.co/ZRDdm1yN" target="_blank" class="example-img-wrapper">
+            <img src="https://i.ibb.co/p6F2yrCn/IMG-2113.jpg" alt="IMG-2113" />
+          </a>
+          <a href="https://ibb.co/TMyCMxNX" target="_blank" class="example-img-wrapper">
+            <img src="https://i.ibb.co/DfdqfHjX/IMG-2130.jpg" alt="IMG-2130" />
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Вкладка Информация -->
+    <div id="tab-info" class="tab-content">
+      <div class="card">
+        <div class="card-title">ИНФОРМАЦИЯ О КЭШБЭКЕ</div>
+        <div class="card-desc" style="font-size: 0.95rem; line-height: 1.6; margin-top: 10px;">
+          • 10% с каждой покупки возвращается кэшбэком на ваш баланс.<br /><br />
+          • Накопленными рублями можно оплатить до 10% стоимости следующих покупок.
+        </div>
+      </div>
+
+      <div class="card">
+        <a href="https://t.me/flaytstudio" target="_blank" class="btn" style="display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px;">
+          <svg style="width: 20px; height: 20px; fill: currentColor;" viewBox="0 0 24 24">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-.99-.65-.35-1.01.22-1.59.15-.15 2.71-2.48 2.76-2.69a.2.2 0 0 0-.05-.18c-.06-.05-.14-.03-.21-.02-.09.02-1.49.95-4.22 2.79-.4.27-.76.41-1.08.4-.36-.01-1.04-.2-1.55-.37-.63-.2-1.12-.31-1.08-.66.02-.18.27-.36.74-.55 2.92-1.27 4.86-2.11 5.83-2.51 2.78-1.16 3.35-1.36 3.73-1.36.08 0 .27.02.39.12.1.08.13.19.14.27-.01.06.01.24 0 .38z"/>
+          </svg>
+          Flayt Studio в Telegram
+        </a>
+        <a href="https://t.me/defwiz0" target="_blank" class="btn btn-secondary" style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+          Заказать у @defwiz0
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Нижнее меню -->
+  <div class="nav-bar">
+    <div class="nav-item active" id="nav-main" onclick="switchTab('main')">
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/>
+      </svg>
+      <div>Главная</div>
+    </div>
+    <div class="nav-item" id="nav-reviews" onclick="switchTab('reviews')">
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+      </svg>
+      <div>Отзывы</div>
+    </div>
+    <div class="nav-item" id="nav-examples" onclick="switchTab('examples')">
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <path d="M21 19V5c0-1.1-.9-2-2-2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2zM8.5 13.5l2.5 3.01L14.5 12l4.5 6H5l3.5-4.5z"/>
+      </svg>
+      <div>Примеры</div>
+    </div>
+    <div class="nav-item" id="nav-info" onclick="switchTab('info')">
+      <svg class="nav-icon" viewBox="0 0 24 24">
+        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+      </svg>
+      <div>Информация</div>
+    </div>
+  </div>
+
+  <!-- Firebase Модули -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+    import { 
+      getFirestore, 
+      doc, 
+      getDoc, 
+      setDoc,
+      updateDoc,
+      deleteDoc,
+      collection,
+      getDocs,
+      addDoc
+    } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDY6HvsXKCeqTZSlMHu_qTFt67uZfrBHhQ",
+      authDomain: "collectcard-c8426.firebaseapp.com",
+      projectId: "collectcard-c8426",
+      storageBucket: "collectcard-c8426.firebasestorage.app",
+      messagingSenderId: "715595769956",
+      appId: "1:715595769956:web:1f918afda2d5aea2211771",
+      measurementId: "G-P9ZHPSJJR0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const ADMIN_IDS = ["5481472322", "6536910883"];
+
+    const tg = window.Telegram?.WebApp;
+    if (tg) {
+      tg.ready();
+      tg.expand();
+    }
+
+    const tgUser = tg?.initDataUnsafe?.user;
+    const userId = tgUser?.id ? String(tgUser.id) : "6536910883";
+    const isAdmin = ADMIN_IDS.includes(userId);
+
+    const userNickname = tgUser?.username 
+      ? `@${tgUser.username}` 
+      : (tgUser?.first_name ? tgUser.first_name : `User_${userId}`);
+    const userPhoto = tgUser?.photo_url || "";
+
+    document.getElementById("user-telegram-id").innerText = userId;
+
+    if (isAdmin) {
+      document.getElementById("admin-panel").style.display = "block";
+    }
+
+    const userRef = doc(db, "users", userId);
+
+    async function fetchUserBalance() {
+      try {
+        const snap = await getDoc(userRef);
+        if (snap.exists()) {
+          const val = snap.data().balance || 0;
+          document.getElementById("balance-amount").innerText = `${val} ₽`;
+        } else {
+          await setDoc(userRef, { balance: 0, createdAt: new Date() });
+          document.getElementById("balance-amount").innerText = "0 ₽";
+        }
+      } catch (err) {
+        console.error("Ошибка загрузки из базы:", err);
+      }
+    }
+
+    fetchUserBalance();
+
+    document.getElementById("btn-copy-id").addEventListener("click", () => {
+      navigator.clipboard.writeText(userId).then(() => {
+        if (tg?.showPopup) {
+          tg.showPopup({ title: "Успешно", message: "ID скопирован в буфер обмена" });
+        } else {
+          alert("ID скопирован");
+        }
+      });
+    });
+
+    function setAdminStatus(msg, isError = false) {
+      const el = document.getElementById("admin-status");
+      el.className = "status-msg " + (isError ? "error" : "success");
+      el.innerText = msg;
+    }
+
+    async function updateBalance(changeType) {
+      const targetId = document.getElementById("admin-user-id").value.trim();
+      const amount = parseFloat(document.getElementById("admin-amount").value);
+
+      if (!targetId || isNaN(amount) || amount <= 0) {
+        setAdminStatus("Заполните ID и сумму", true);
+        return;
+      }
+
+      try {
+        const targetRef = doc(db, "users", targetId);
+        const targetSnap = await getDoc(targetRef);
+        
+        let currentBal = 0;
+        if (targetSnap.exists()) {
+          currentBal = targetSnap.data().balance || 0;
+        }
+
+        const delta = changeType === 'add' ? amount : -amount;
+        const newBalance = Math.max(0, currentBal + delta);
+
+        await setDoc(targetRef, { balance: newBalance }, { merge: true });
+
+        const actionText = changeType === 'add' ? 'начислено' : 'списано';
+        setAdminStatus(`Успешно ${actionText} ${amount} ₽ пользователю ${targetId}`);
+
+        if (targetId === userId) {
+          fetchUserBalance();
+        }
+      } catch (err) {
+        console.error("Ошибка записи в Firestore:", err);
+        setAdminStatus("Ошибка: Ошибка записи в базу", true);
+      }
+    }
+
+    document.getElementById("btn-admin-add").addEventListener("click", () => updateBalance('add'));
+    document.getElementById("btn-admin-remove").addEventListener("click", () => updateBalance('remove'));
+
+    const statsList = document.getElementById("admin-stats-list");
+    const btnToggleStats = document.getElementById("btn-toggle-stats");
+
+    async function fetchUsersStats() {
+      statsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Загрузка...</div>';
+      try {
+        const querySnapshot = await getDocs(collection(db, "users"));
+        if (querySnapshot.empty) {
+          statsList.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Пользователей нет</div>';
+          return;
+        }
+
+        let html = "";
+        querySnapshot.forEach((docSnap) => {
+          const uId = docSnap.id;
+          const uData = docSnap.data();
+          const uBal = uData.balance || 0;
+          html += `
+            <div class="stats-item">
+              <span class="stats-id">${uId}</span>
+              <span class="stats-balance">${uBal} ₽</span>
+            </div>
+          `;
+        });
+        statsList.innerHTML = html;
+      } catch (err) {
+        console.error("Ошибка загрузки статистики:", err);
+        statsList.innerHTML = '<div style="text-align: center; color: var(--accent-red); font-size: 0.85rem;">Ошибка загрузки</div>';
+      }
+    }
+
+    btnToggleStats.addEventListener("click", () => {
+      const isVisible = statsList.style.display === "block";
+      if (isVisible) {
+        statsList.style.display = "none";
+      } else {
+        statsList.style.display = "block";
+        fetchUsersStats();
+      }
+    });
+
+    // --- ЛОГИКА ОТЗЫВОВ И ЗВЕЗД ---
+    let selectedRating = 10;
+    const starPicker = document.getElementById("star-picker");
+    const ratingLabel = document.getElementById("rating-label");
+
+    function getStarSvg(filled) {
+      return `<svg class="star-icon ${filled ? 'filled' : ''}" viewBox="0 0 24 24">
+        <path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/>
+      </svg>`;
+    }
+
+    function renderStarPicker(rating) {
+      starPicker.innerHTML = "";
+      for (let i = 1; i <= 10; i++) {
+        const starWrap = document.createElement("span");
+        starWrap.innerHTML = getStarSvg(i <= rating);
+        starWrap.addEventListener("click", () => {
+          selectedRating = i;
+          ratingLabel.innerText = `${selectedRating} / 10`;
+          renderStarPicker(selectedRating);
+        });
+        starPicker.appendChild(starWrap);
+      }
+    }
+    renderStarPicker(selectedRating);
+
+    const btnSubmitReview = document.getElementById("btn-submit-review");
+    const reviewTextInput = document.getElementById("review-text-input");
+    const reviewStatus = document.getElementById("review-status");
+
+    btnSubmitReview.addEventListener("click", async () => {
+      const text = reviewTextInput.value.trim();
+      if (!text) {
+        reviewStatus.className = "status-msg error";
+        reviewStatus.innerText = "Введите текст отзыва";
+        return;
+      }
+
+      btnSubmitReview.disabled = true;
+      reviewStatus.className = "status-msg";
+      reviewStatus.innerText = "Публикация...";
+
+      try {
+        await addDoc(collection(db, "reviews"), {
+          userId: userId,
+          nickname: userNickname,
+          avatar: userPhoto,
+          rating: selectedRating,
+          text: text,
+          createdAt: new Date()
+        });
+
+        reviewTextInput.value = "";
+        reviewStatus.className = "status-msg success";
+        reviewStatus.innerText = "Отзыв успешно опубликован!";
+        btnSubmitReview.disabled = false;
+        
+        fetchReviews();
+      } catch (err) {
+        console.error("Ошибка сохранения отзыва:", err);
+        reviewStatus.className = "status-msg error";
+        reviewStatus.innerText = "Ошибка при отправке отзыва";
+        btnSubmitReview.disabled = false;
+      }
+    });
+
+    // Функция отрисовки и получения отзывов
+    async function fetchReviews() {
+      const container = document.getElementById("reviews-container");
+      try {
+        const q = collection(db, "reviews");
+        const querySnapshot = await getDocs(q);
+
+        if (querySnapshot.empty) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); font-size: 0.85rem;">Отзывов пока нет. Будьте первым!</div>';
+          return;
+        }
+
+        let reviewsData = [];
+        querySnapshot.forEach((docSnap) => {
+          reviewsData.push({ id: docSnap.id, ...docSnap.data() });
+        });
+
+        reviewsData.sort((a, b) => {
+          const tA = a.createdAt?.seconds || 0;
+          const tB = b.createdAt?.seconds || 0;
+          return tB - tA;
+        });
+
+        let html = "";
+        reviewsData.forEach((data) => {
+          let starsHtml = "";
+          for (let i = 1; i <= 10; i++) {
+            starsHtml += getStarSvg(i <= (data.rating || 10));
+          }
+
+          const avatarHtml = data.avatar 
+            ? `<img class="review-avatar" src="${data.avatar}" alt="avatar" />`
+            : `<div class="review-avatar">${(data.nickname || 'U').replace('@', '').charAt(0).toUpperCase()}</div>`;
+
+          const dateStr = data.createdAt?.toDate 
+            ? data.createdAt.toDate().toLocaleDateString("ru-RU", { day: 'numeric', month: 'short', year: 'numeric' })
+            : "Только что";
+
+          const isAuthor = String(data.userId) === userId;
+
+          // Действия к отзыву (редактировать/удалить для автора или админа)
+          let actionsHtml = "";
+          if (isAuthor || isAdmin) {
+            actionsHtml = `
+              <div class="review-actions">
+                <button class="btn btn-secondary btn-xs" onclick="editReview('${data.id}', '${data.text.replace(/'/g, "\\'")}', ${data.rating})">Редактировать</button>
+                <button class="btn btn-red btn-xs" onclick="deleteReview('${data.id}')">Удалить</button>
+              </div>
+            `;
+          }
+
+          // Ответ админа
+          let adminReplyHtml = "";
+          if (data.adminReply) {
+            adminReplyHtml = `
+              <div class="admin-reply-box">
+                <div class="admin-reply-header">
+                  <span>Ответ администратора (${data.replyAdminName || 'Админ'}):</span>
+                  ${isAdmin ? `<span style="cursor:pointer; color: var(--accent-red);" onclick="deleteAdminReply('${data.id}')">Удалить</span>` : ''}
+                </div>
+                <div class="review-text">${data.adminReply}</div>
+              </div>
+            `;
+          }
+
+          // Форма ответа для администраторов
+          let adminReplyFormHtml = "";
+          if (isAdmin) {
+            adminReplyFormHtml = `
+              <div style="margin-top: 8px;">
+                <button class="btn btn-secondary btn-xs" onclick="toggleReplyForm('${data.id}')">
+                  ${data.adminReply ? 'Изменить ответ' : 'Ответить на отзыв'}
+                </button>
+                <div class="reply-form" id="reply-form-${data.id}">
+                  <textarea id="reply-text-${data.id}" placeholder="Введите ответ администратора...">${data.adminReply || ''}</textarea>
+                  <button class="btn btn-xs" onclick="submitAdminReply('${data.id}')">Сохранить ответ</button>
+                </div>
+              </div>
+            `;
+          }
+
+          html += `
+            <div class="review-item">
+              <div class="review-header">
+                ${avatarHtml}
+                <div class="review-user-info">
+                  <div class="review-username">${data.nickname || 'Пользователь'}</div>
+                  <div class="review-date">${dateStr}</div>
+                </div>
+              </div>
+              <div class="review-stars">
+                ${starsHtml}
+                <span style="font-size: 0.8rem; font-weight: 700; color: var(--accent-gold); margin-left: 6px;">${data.rating || 10}/10</span>
+              </div>
+              <div class="review-text">${data.text || ''}</div>
+              ${adminReplyHtml}
+              ${actionsHtml}
+              ${adminReplyFormHtml}
+            </div>
+          `;
+        });
+
+        container.innerHTML = html;
+      } catch (err) {
+        console.error("Ошибка при получении отзывов:", err);
+        container.innerHTML = '<div style="text-align: center; color: var(--accent-red); font-size: 0.85rem;">Ошибка загрузки отзывов</div>';
+      }
+    }
+
+    // --- ФУНКЦИИ УПРАВЛЕНИЯ ОТЗЫВАМИ (ГЛОБАЛЬНЫЕ) ---
+
+    // Редактирование отзыва
+    window.editReview = async function(reviewId, oldText, oldRating) {
+      const newText = prompt("Отредактируйте ваш отзыв:", oldText);
+      if (newText === null) return;
+      
+      const newRatingStr = prompt("Введите новую оценку (1-10):", oldRating);
+      const newRating = parseInt(newRatingStr);
+
+      if (!newText.trim() || isNaN(newRating) || newRating < 1 || newRating > 10) {
+        alert("Заполните корректный текст и оценку (от 1 до 10)");
+        return;
+      }
+
+      try {
+        const rRef = doc(db, "reviews", reviewId);
+        await updateDoc(rRef, {
+          text: newText.trim(),
+          rating: newRating
+        });
+        fetchReviews();
+      } catch (err) {
+        console.error("Ошибка при редактировании:", err);
+        alert("Не удалось обновить отзыв");
+      }
+    };
+
+    // Удаление отзыва
+    window.deleteReview = async function(reviewId) {
+      if (!confirm("Вы уверены, что хотите удалить этот отзыв?")) return;
+      try {
+        await deleteDoc(doc(db, "reviews", reviewId));
+        fetchReviews();
+      } catch (err) {
+        console.error("Ошибка при удалении:", err);
+        alert("Не удалось удалить отзыв");
+      }
+    };
+
+    // Показ/скрытие формы ответа админа
+    window.toggleReplyForm = function(reviewId) {
+      const form = document.getElementById(`reply-form-${reviewId}`);
+      if (form) {
+        form.style.display = form.style.display === "block" ? "none" : "block";
+      }
+    };
+
+    // Отправка/обновление ответа админа
+    window.submitAdminReply = async function(reviewId) {
+      const textEl = document.getElementById(`reply-text-${reviewId}`);
+      const text = textEl ? textEl.value.trim() : "";
+
+      if (!text) {
+        alert("Введите текст ответа");
+        return;
+      }
+
+      try {
+        const rRef = doc(db, "reviews", reviewId);
+        await updateDoc(rRef, {
+          adminReply: text,
+          replyAdminName: userNickname
+        });
+        fetchReviews();
+      } catch (err) {
+        console.error("Ошибка добавления ответа:", err);
+        alert("Не удалось сохранить ответ");
+      }
+    };
+
+    // Удаление ответа админа
+    window.deleteAdminReply = async function(reviewId) {
+      if (!confirm("Удалить ответ администратора?")) return;
+      try {
+        const rRef = doc(db, "reviews", reviewId);
+        await updateDoc(rRef, {
+          adminReply: null,
+          replyAdminName: null
+        });
+        fetchReviews();
+      } catch (err) {
+        console.error("Ошибка удаления ответа:", err);
+        alert("Не удалось удалить ответ");
+      }
+    };
+
+    // Переключение вкладок
+    window.switchTab = function(tab) {
+      document.querySelectorAll(".tab-content").forEach(c => c.classList.remove("active"));
+      document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
+
+      if (tab === 'main') {
+        document.getElementById("tab-main").classList.add("active");
+        document.getElementById("nav-main").classList.add("active");
+      } else if (tab === 'reviews') {
+        document.getElementById("tab-reviews").classList.add("active");
+        document.getElementById("nav-reviews").classList.add("active");
+        fetchReviews();
+      } else if (tab === 'examples') {
+        document.getElementById("tab-examples").classList.add("active");
+        document.getElementById("nav-examples").classList.add("active");
+      } else {
+        document.getElementById("tab-info").classList.add("active");
+        document.getElementById("nav-info").classList.add("active");
+      }
+    };
+  </script>
+</body>
+</html>
